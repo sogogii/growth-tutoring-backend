@@ -51,42 +51,39 @@ public class ChatController {
             @RequestParam Long studentUserId,
             @RequestParam Long tutorUserId) {
 
-        StudentTutorLink link = linkRepo
-                .findByStudent_IdAndTutor_Id(studentUserId, tutorUserId)
+        // Make sure both users exist
+        User student = userRepo.findById(studentUserId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "You don't have a relationship with this tutor"
-                ));
+                        HttpStatus.NOT_FOUND, "Student not found"));
 
-        if (link.getStatus() != StudentTutorLinkStatus.ACCEPTED) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Chat is only available after you are matched."
-            );
-        }
+        User tutor = userRepo.findById(tutorUserId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Tutor not found"));
 
+        // TODO: you can enforce link ACCEPTED here using linkRepo if you want
+        // Optional<StudentTutorLink> linkOpt = linkRepo.findByStudentUserIdAndTutorUserId(...);
+        // if (linkOpt.isEmpty() || linkOpt.get().getStatus() != StudentTutorLinkStatus.ACCEPTED) { ... }
+
+        // Try to find existing conversation
         Conversation conv = conversationRepo
                 .findByStudent_IdAndTutor_Id(studentUserId, tutorUserId)
                 .orElseGet(() -> {
                     Conversation c = new Conversation();
-                    User student = userRepo.findById(studentUserId)
-                            .orElseThrow(() -> new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND, "Student not found"));
-                    User tutor = userRepo.findById(tutorUserId)
-                            .orElseThrow(() -> new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND, "Tutor not found"));
-
                     c.setStudent(student);
                     c.setTutor(tutor);
                     return conversationRepo.save(c);
                 });
 
-        // The frontend can figure out who "other user" is,
-        // but we return conversation id so it can navigate.
+        // For this endpoint, "other user" is the tutor (the opponent)
+        String otherFullName = tutor.getFirstName() + " " + tutor.getLastName();
+
         return new ConversationSummaryDto(
                 conv.getId(),
-                null,
-                null
+                tutor.getId(),
+                otherFullName,
+                tutor.getFirstName(),
+                tutor.getLastName(),
+                null // placeholder for avatar URL (wire your profile picture field here later)
         );
     }
 
@@ -103,14 +100,28 @@ public class ChatController {
 
         return convs.stream()
                 .map(c -> {
+                    // if current user is student, other is tutor, otherwise other is student
                     User other = c.getStudent().getId().equals(userId)
                             ? c.getTutor()
                             : c.getStudent();
-                    String name = other.getFirstName() + " " + other.getLastName();
+
+                    String otherFullName =
+                            (other.getFirstName() != null ? other.getFirstName() : "") +
+                                    " " +
+                                    (other.getLastName() != null ? other.getLastName() : "");
+                    otherFullName = otherFullName.trim();
+
+                    if (otherFullName.isEmpty()) {
+                        otherFullName = "Unknown";
+                    }
+
                     return new ConversationSummaryDto(
                             c.getId(),
                             other.getId(),
-                            name
+                            otherFullName,
+                            other.getFirstName(),
+                            other.getLastName(),
+                            null // avatar URL placeholder
                     );
                 })
                 .collect(Collectors.toList());
@@ -126,12 +137,18 @@ public class ChatController {
 
         return messageRepo.findByConversation_IdOrderByCreatedAtAsc(conversationId)
                 .stream()
-                .map(m -> new MessageDto(
-                        m.getId(),
-                        m.getSender().getId(),
-                        m.getContent(),
-                        m.getCreatedAt()
-                ))
+                .map(m -> {
+                    User sender = m.getSender();
+                    return new MessageDto(
+                            m.getId(),
+                            sender.getId(),
+                            m.getContent(),
+                            m.getCreatedAt(),
+                            sender.getFirstName(),
+                            sender.getLastName(),
+                            null // avatar URL placeholder
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
@@ -148,29 +165,23 @@ public class ChatController {
 
         if (req.getContent() == null || req.getContent().trim().isEmpty()) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Message content cannot be empty"
-            );
+                    HttpStatus.BAD_REQUEST, "Message content cannot be empty");
         }
 
         Conversation conv = conversationRepo.findById(conversationId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Conversation not found"));
 
-        // sender must be part of this conversation
-        boolean isStudent = conv.getStudent().getId().equals(senderUserId);
-        boolean isTutor = conv.getTutor().getId().equals(senderUserId);
-
-        if (!isStudent && !isTutor) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "You are not part of this conversation"
-            );
-        }
-
         User sender = userRepo.findById(senderUserId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Sender not found"));
+
+        // Optional: verify sender is part of this conversation
+        if (!sender.getId().equals(conv.getStudent().getId())
+                && !sender.getId().equals(conv.getTutor().getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Sender is not part of this conversation");
+        }
 
         Message msg = new Message();
         msg.setConversation(conv);
@@ -183,7 +194,10 @@ public class ChatController {
                 msg.getId(),
                 sender.getId(),
                 msg.getContent(),
-                msg.getCreatedAt()
+                msg.getCreatedAt(),
+                sender.getFirstName(),
+                sender.getLastName(),
+                null // avatar URL placeholder
         );
     }
 }
