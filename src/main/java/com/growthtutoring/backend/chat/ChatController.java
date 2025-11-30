@@ -200,4 +200,27 @@ public class ChatController {
                 null // avatar URL placeholder
         );
     }
+
+    @GetMapping("/unread-count")
+    public long getUnreadCount(@RequestParam Long userId) {
+        return messageRepo.countUnreadForUser(userId);
+    }
+
+    @PostMapping("/conversations/{conversationId}/read")
+    public ResponseEntity<Void> markConversationRead(
+            @PathVariable Long conversationId,
+            @RequestParam Long userId) {
+
+        Conversation conv = conversationRepo.findById(conversationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!conv.getStudent().getId().equals(userId) &&
+                !conv.getTutor().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        messageRepo.markConversationRead(conversationId, userId);
+        return ResponseEntity.ok().build();
+    }
+
 }

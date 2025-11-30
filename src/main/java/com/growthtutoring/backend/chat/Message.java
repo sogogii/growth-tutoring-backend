@@ -80,6 +80,14 @@ public class Message {
         this.createdAt = createdAt;
     }
 
+    public boolean isRead() {
+        return readAt != null;
+    }
+
+    public void markRead() {
+        this.readAt = Instant.now();
+    }
+
     public Instant getReadAt() {
         return readAt;
     }
