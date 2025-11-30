@@ -10,12 +10,16 @@ import java.util.List;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
+    // existing
     List<Message> findByConversation_IdOrderByCreatedAtAsc(Long conversationId);
 
-    // Count unread messages for a user:
-    // - user participates in conversation (student or tutor)
-    // - user is NOT the sender
-    // - read == false
+    // latest message in a conversation
+    Message findTopByConversation_IdOrderByCreatedAtDesc(Long conversationId);
+
+    // unread messages for this user in a single conversation
+    long countByConversation_IdAndSender_IdNotAndReadAtIsNull(Long conversationId, Long viewerUserId);
+
+    // total unread messages for a user (for the header badge)
     @Query("""
         SELECT COUNT(m)
         FROM Message m
@@ -26,7 +30,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
         """)
     long countUnreadForUser(@Param("userId") Long userId);
 
-    // Mark all messages in a conversation as read for a user
+    // mark all messages from the other side as read in this conversation
     @Modifying
     @Transactional
     @Query("""
@@ -36,8 +40,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
           AND m.sender.id <> :userId
           AND m.readAt IS NULL
         """)
-    int markConversationRead(
-            @Param("conversationId") Long conversationId,
-            @Param("userId") Long userId
-    );
+    int markConversationRead(@Param("conversationId") Long conversationId,
+                             @Param("userId") Long userId);
 }

@@ -1,38 +1,27 @@
 package com.growthtutoring.backend.chat.dto;
 
+import java.time.Instant;
+
 public class ConversationSummaryDto {
 
     private Long id;
     private Long otherUserId;
     private String otherName;
 
-    // NEW
-    private String otherFirstName;
-    private String otherLastName;
-    private String otherAvatarUrl;
+    // Latest message info
+    private String lastMessageContent;
+    private Instant lastMessageCreatedAt;
+
+    // Unread messages in this conversation for the current viewer
+    private long unreadCount;
 
     public ConversationSummaryDto() {
     }
 
-    // keep old 3-arg constructor
     public ConversationSummaryDto(Long id, Long otherUserId, String otherName) {
-        this(id, otherUserId, otherName, null, null, null);
-    }
-
-    public ConversationSummaryDto(
-            Long id,
-            Long otherUserId,
-            String otherName,
-            String otherFirstName,
-            String otherLastName,
-            String otherAvatarUrl
-    ) {
         this.id = id;
         this.otherUserId = otherUserId;
         this.otherName = otherName;
-        this.otherFirstName = otherFirstName;
-        this.otherLastName = otherLastName;
-        this.otherAvatarUrl = otherAvatarUrl;
     }
 
     public Long getId() {
@@ -59,27 +48,27 @@ public class ConversationSummaryDto {
         this.otherName = otherName;
     }
 
-    public String getOtherFirstName() {
-        return otherFirstName;
+    public String getLastMessageContent() {
+        return lastMessageContent;
     }
 
-    public void setOtherFirstName(String otherFirstName) {
-        this.otherFirstName = otherFirstName;
+    public void setLastMessageContent(String lastMessageContent) {
+        this.lastMessageContent = lastMessageContent;
     }
 
-    public String getOtherLastName() {
-        return otherLastName;
+    public Instant getLastMessageCreatedAt() {
+        return lastMessageCreatedAt;
     }
 
-    public void setOtherLastName(String otherLastName) {
-        this.otherLastName = otherLastName;
+    public void setLastMessageCreatedAt(Instant lastMessageCreatedAt) {
+        this.lastMessageCreatedAt = lastMessageCreatedAt;
     }
 
-    public String getOtherAvatarUrl() {
-        return otherAvatarUrl;
+    public long getUnreadCount() {
+        return unreadCount;
     }
 
-    public void setOtherAvatarUrl(String otherAvatarUrl) {
-        this.otherAvatarUrl = otherAvatarUrl;
+    public void setUnreadCount(long unreadCount) {
+        this.unreadCount = unreadCount;
     }
 }

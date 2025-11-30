@@ -80,10 +80,7 @@ public class ChatController {
         return new ConversationSummaryDto(
                 conv.getId(),
                 tutor.getId(),
-                otherFullName,
-                tutor.getFirstName(),
-                tutor.getLastName(),
-                null // placeholder for avatar URL (wire your profile picture field here later)
+                otherFullName
         );
     }
 
@@ -100,31 +97,47 @@ public class ChatController {
 
         return convs.stream()
                 .map(c -> {
-                    // if current user is student, other is tutor, otherwise other is student
+                    // figure out who the "other" person is
                     User other = c.getStudent().getId().equals(userId)
                             ? c.getTutor()
                             : c.getStudent();
+                    String name = other.getFirstName() + " " + other.getLastName();
 
-                    String otherFullName =
-                            (other.getFirstName() != null ? other.getFirstName() : "") +
-                                    " " +
-                                    (other.getLastName() != null ? other.getLastName() : "");
-                    otherFullName = otherFullName.trim();
-
-                    if (otherFullName.isEmpty()) {
-                        otherFullName = "Unknown";
-                    }
-
-                    return new ConversationSummaryDto(
+                    ConversationSummaryDto dto = new ConversationSummaryDto(
                             c.getId(),
                             other.getId(),
-                            otherFullName,
-                            other.getFirstName(),
-                            other.getLastName(),
-                            null // avatar URL placeholder
+                            name
                     );
+
+                    // latest message for this conversation
+                    Message last = messageRepo
+                            .findTopByConversation_IdOrderByCreatedAtDesc(c.getId());
+                    if (last != null) {
+                        dto.setLastMessageContent(last.getContent());
+                        dto.setLastMessageCreatedAt(last.getCreatedAt());
+                    }
+
+                    // unread messages for this user in this conversation
+                    long unread = messageRepo
+                            .countByConversation_IdAndSender_IdNotAndReadAtIsNull(c.getId(), userId);
+                    dto.setUnreadCount(unread);
+
+                    return dto;
                 })
-                .collect(Collectors.toList());
+                // newest conversations first (by last message time)
+                .sorted((a, b) -> {
+                    if (a.getLastMessageCreatedAt() == null && b.getLastMessageCreatedAt() == null) {
+                        return 0;
+                    }
+                    if (a.getLastMessageCreatedAt() == null) {
+                        return 1;
+                    }
+                    if (b.getLastMessageCreatedAt() == null) {
+                        return -1;
+                    }
+                    return b.getLastMessageCreatedAt().compareTo(a.getLastMessageCreatedAt());
+                })
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // ---------------------------------------------------------
