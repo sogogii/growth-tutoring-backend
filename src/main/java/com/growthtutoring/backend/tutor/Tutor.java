@@ -46,6 +46,10 @@ public class Tutor {
     @Column(name = "hourly_rate", precision = 10, scale = 2, nullable = false)
     private BigDecimal hourlyRate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_tier", length = 20)
+    private VerificationTier verificationTier;
+
     // getters & setters
 
     public Long getId() {
@@ -139,4 +143,8 @@ public class Tutor {
     public void setHourlyRate(BigDecimal hourlyRate) {
         this.hourlyRate = hourlyRate;
     }
+
+    public VerificationTier getVerificationTier() { return verificationTier; }
+
+    public void setVerificationTier(VerificationTier verificationTier) { this.verificationTier = verificationTier; }
 }

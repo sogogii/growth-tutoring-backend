@@ -10,5 +10,6 @@ public record TutorProfileDto(
         String teachingMethod,
         String headline,
         String bio,
-        BigDecimal hourlyRate
+        BigDecimal hourlyRate,
+        String verificationTier
 ) {}

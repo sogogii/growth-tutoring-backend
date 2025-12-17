@@ -3,6 +3,7 @@ package com.growthtutoring.backend.auth;
 import com.growthtutoring.backend.auth.dto.AuthResponse;
 import com.growthtutoring.backend.auth.dto.LoginRequest;
 import com.growthtutoring.backend.auth.dto.SignupRequest;
+import com.growthtutoring.backend.tutor.VerificationTier;
 import com.growthtutoring.backend.user.User;
 import com.growthtutoring.backend.user.UserRepository;
 import com.growthtutoring.backend.user.UserRole;
@@ -101,6 +102,7 @@ public class AuthController {
             tutor.setHeadline(null);
             tutor.setBio(null);
             tutor.setHourlyRate(java.math.BigDecimal.ZERO);
+            tutor.setVerificationTier(VerificationTier.TIER_1);
 
             tutorRepository.save(tutor);
         } else if (role == UserRole.STUDENT) {

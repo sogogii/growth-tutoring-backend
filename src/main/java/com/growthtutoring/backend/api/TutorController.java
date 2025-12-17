@@ -145,7 +145,10 @@ public class TutorController {
                 tutor.getTeachingMethod(),
                 tutor.getHeadline(),
                 tutor.getBio(),
-                tutor.getHourlyRate()
+                tutor.getHourlyRate(),
+                tutor.getVerificationTier() != null
+                        ? tutor.getVerificationTier().name()
+                        : "TIER_1"
         );
     }
 
@@ -161,7 +164,10 @@ public class TutorController {
                         : null,
                 tutor.getHeadline(),
                 tutor.getBio(),
-                tutor.getHourlyRate()
+                tutor.getHourlyRate(),
+                tutor.getVerificationTier() != null
+                        ? tutor.getVerificationTier().name()
+                        : "TIER_1"
         );
     }
 }
