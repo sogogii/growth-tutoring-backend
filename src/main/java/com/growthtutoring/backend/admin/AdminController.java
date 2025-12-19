@@ -4,6 +4,9 @@ import com.growthtutoring.backend.user.User;
 import com.growthtutoring.backend.user.UserRepository;
 import com.growthtutoring.backend.user.UserRole;
 import com.growthtutoring.backend.user.UserStatus;
+import com.growthtutoring.backend.tutor.Tutor;
+import com.growthtutoring.backend.tutor.TutorRepository;
+import com.growthtutoring.backend.tutor.VerificationTier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +23,11 @@ import java.util.List;
 public class AdminController {
 
     private final UserRepository userRepository;
+    private final TutorRepository tutorRepository;
 
-    public AdminController(UserRepository userRepository) {
+    public AdminController(UserRepository userRepository, TutorRepository tutorRepository) {
         this.userRepository = userRepository;
+        this.tutorRepository = tutorRepository;
     }
 
     // ----- helper: load admin by id and check role -----
@@ -88,32 +93,28 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
-    // 4) Delete user
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<?> deleteUser(
+    // 4) Update tutor verification tier (NEW ENDPOINT)
+    @PatchMapping("/tutors/{userId}/verification-tier")
+    public ResponseEntity<?> updateVerificationTier(
             @RequestParam("adminUserId") Long adminUserId,
-            @PathVariable Long id
+            @PathVariable Long userId,
+            @RequestBody UpdateVerificationTierRequest body
     ) {
         requireAdmin(adminUserId);
 
-        if (!userRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+        // Find the tutor by userId
+        Tutor tutor = tutorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tutor not found for user ID: " + userId));
+
+        // Validate and set the verification tier
+        VerificationTier newTier = body.getVerificationTier();
+        if (newTier == null) {
+            return ResponseEntity.badRequest().body("Verification tier is required");
         }
 
-        userRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
+        tutor.setVerificationTier(newTier);
+        tutorRepository.save(tutor);
 
-    // ----- DTOs -----
-    public static class UpdateStatusRequest {
-        private UserStatus status;
-        public UserStatus getStatus() { return status; }
-        public void setStatus(UserStatus status) { this.status = status; }
-    }
-
-    public static class UpdateRoleRequest {
-        private UserRole role;
-        public UserRole getRole() { return role; }
-        public void setRole(UserRole role) { this.role = role; }
+        return ResponseEntity.ok().body("Verification tier updated successfully");
     }
 }
