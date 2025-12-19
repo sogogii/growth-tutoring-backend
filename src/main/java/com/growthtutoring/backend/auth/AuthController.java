@@ -1,17 +1,12 @@
 package com.growthtutoring.backend.auth;
 
-import com.growthtutoring.backend.auth.dto.AuthResponse;
-import com.growthtutoring.backend.auth.dto.LoginRequest;
-import com.growthtutoring.backend.auth.dto.SignupRequest;
-import com.growthtutoring.backend.auth.dto.SendVerificationRequest;
-import com.growthtutoring.backend.auth.dto.VerifyCodeRequest;
+import com.growthtutoring.backend.auth.dto.*;
 import com.growthtutoring.backend.user.User;
 import com.growthtutoring.backend.user.UserRepository;
 import com.growthtutoring.backend.user.UserRole;
 import com.growthtutoring.backend.user.UserStatus;
 import com.growthtutoring.backend.tutor.Tutor;
 import com.growthtutoring.backend.tutor.TutorRepository;
-import com.growthtutoring.backend.tutor.VerificationTier;
 import com.growthtutoring.backend.student.Student;
 import com.growthtutoring.backend.student.StudentRepository;
 import com.growthtutoring.backend.tutor.TeachingMethod;
@@ -36,75 +31,61 @@ public class AuthController {
     private final TutorRepository tutorRepository;
     private final StudentRepository studentRepository;
     private final EmailService emailService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(UserRepository userRepository,
                           PasswordEncoder passwordEncoder,
                           TutorRepository tutorRepository,
                           StudentRepository studentRepository,
-                          EmailService emailService) {
+                          EmailService emailService,
+                          PasswordResetService passwordResetService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tutorRepository = tutorRepository;
         this.studentRepository = studentRepository;
         this.emailService = emailService;
+        this.passwordResetService = passwordResetService;
     }
 
     // ==================== EMAIL VERIFICATION ENDPOINTS ====================
 
-    /**
-     * POST /api/auth/send-verification
-     * Sends a 6-digit verification code to the provided email
-     */
     @PostMapping("/send-verification")
     public ResponseEntity<?> sendVerification(@RequestBody SendVerificationRequest request) {
-        try {
-            // Check if email already exists
-            if (userRepository.existsByEmail(request.getEmail())) {
-                return ResponseEntity.badRequest().body("Email already in use");
-            }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity.badRequest().body("Email already in use");
+        }
 
+        try {
             emailService.sendVerificationEmail(request.getEmail());
-            return ResponseEntity.ok("Verification code sent to " + request.getEmail());
+            return ResponseEntity.ok("Verification code sent");
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Failed to send verification email: " + e.getMessage());
+            return ResponseEntity.status(500).body("Failed to send verification email");
         }
     }
 
-    /**
-     * POST /api/auth/verify-code
-     * Verifies the 6-digit code sent to the email
-     */
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody VerifyCodeRequest request) {
         boolean isValid = emailService.verifyCode(request.getEmail(), request.getCode());
 
         if (isValid) {
-            return ResponseEntity.ok("Email verified successfully");
+            return ResponseEntity.ok("Code verified");
         } else {
-            return ResponseEntity.status(400).body("Invalid or expired verification code");
+            return ResponseEntity.status(400).body("Invalid or expired code");
         }
     }
 
     // ==================== SIGNUP ENDPOINT ====================
 
-    /**
-     * POST /api/auth/signup
-     * Creates a new user account (after email verification)
-     */
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
-        // 1) Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body("Email already in use");
         }
 
-        // 2) Check if userUid already exists
         if (userRepository.existsByUserUid(request.getUserUid())) {
             return ResponseEntity.badRequest().body("User ID already in use");
         }
 
-        // 3) Create user
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -112,27 +93,24 @@ public class AuthController {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setBirthday(LocalDate.parse(request.getBirthday()));
+        user.setRole(UserRole.valueOf(request.getRole().toUpperCase()));
+        user.setEmailVerified(true); // Set to true after verification
 
         UserRole role = UserRole.valueOf(request.getRole().toUpperCase());
         user.setRole(role);
 
-        // Set status based on role
         if (role == UserRole.TUTOR) {
             user.setStatus(UserStatus.PENDING);
         } else {
             user.setStatus(UserStatus.ACTIVE);
         }
 
-        // Mark email as verified (since they passed verification step)
-        user.setEmailVerified(true);
-
         User savedUser = userRepository.save(user);
 
-        // 4) Create role-specific records
         if (role == UserRole.TUTOR) {
             Tutor tutor = new Tutor();
             tutor.setUserId(savedUser.getId());
-            tutor.setJoinedAt(LocalDate.now());
+            tutor.setJoinedAt(java.time.LocalDate.now());
             tutor.setSubjectLabel(request.getSubjectLabel());
             tutor.setRatingAvg(null);
             tutor.setRatingCount(0);
@@ -142,7 +120,6 @@ public class AuthController {
             tutor.setHeadline(null);
             tutor.setBio(null);
             tutor.setHourlyRate(java.math.BigDecimal.ZERO);
-            tutor.setVerificationTier(VerificationTier.TIER_1);
 
             tutorRepository.save(tutor);
         } else if (role == UserRole.STUDENT) {
@@ -151,7 +128,6 @@ public class AuthController {
             studentRepository.save(student);
         }
 
-        // 5) Return response
         AuthResponse response = new AuthResponse(
                 savedUser.getId(),
                 savedUser.getUserUid(),
@@ -166,13 +142,8 @@ public class AuthController {
 
     // ==================== LOGIN ENDPOINT ====================
 
-    /**
-     * POST /api/auth/login
-     * Authenticates a user and returns their information
-     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        // Find user by email
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
 
         if (optionalUser.isEmpty()) {
@@ -181,17 +152,14 @@ public class AuthController {
 
         User user = optionalUser.get();
 
-        // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             return ResponseEntity.status(401).body("Invalid email or password");
         }
 
-        // Check if account is suspended
         if (user.getStatus() == UserStatus.SUSPENDED) {
             return ResponseEntity.status(403).body("Account is suspended");
         }
 
-        // Return user information
         AuthResponse response = new AuthResponse(
                 user.getId(),
                 user.getUserUid(),
@@ -202,5 +170,65 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    // ==================== PASSWORD RESET ENDPOINTS ====================
+
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody RequestPasswordResetRequest request) {
+        // Check if email exists
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+
+        if (userOpt.isEmpty()) {
+            // For security, don't reveal if email exists or not
+            return ResponseEntity.ok("If the email exists, a reset code has been sent");
+        }
+
+        try {
+            passwordResetService.sendPasswordResetEmail(request.getEmail());
+            return ResponseEntity.ok("Password reset code sent");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Failed to send reset code");
+        }
+    }
+
+    @PostMapping("/verify-reset-token")
+    public ResponseEntity<?> verifyResetToken(@RequestBody ResetPasswordRequest request) {
+        boolean isValid = passwordResetService.verifyResetToken(request.getEmail(), request.getToken());
+
+        if (isValid) {
+            return ResponseEntity.ok("Token verified");
+        } else {
+            return ResponseEntity.status(400).body("Invalid or expired token");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        // Verify token first
+        boolean isValid = passwordResetService.verifyResetToken(request.getEmail(), request.getToken());
+
+        if (!isValid) {
+            return ResponseEntity.status(400).body("Invalid or expired token");
+        }
+
+        // Find user
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // Mark token as used
+        passwordResetService.markTokenAsUsed(request.getEmail(), request.getToken());
+
+        return ResponseEntity.ok("Password reset successfully");
     }
 }

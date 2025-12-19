@@ -33,25 +33,39 @@ public class EmailService {
         EmailVerification verification = new EmailVerification();
         verification.setEmail(toEmail);
         verification.setVerificationCode(code);
-        verification.setExpiresAt(Instant.now().plus(15, ChronoUnit.MINUTES)); // 15 min expiry
+        verification.setExpiresAt(Instant.now().plus(3, ChronoUnit.MINUTES)); // 3 min expiry ← CHANGED
         verification.setVerified(false);
 
         verificationRepository.save(verification);
 
-        // Send email
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(toEmail);
-        message.setSubject("Growth Tutoring - Email Verification");
-        message.setText(
-                "Welcome to Growth Tutoring!\n\n" +
-                        "Your verification code is: " + code + "\n\n" +
-                        "This code will expire in 15 minutes.\n\n" +
-                        "If you didn't request this code, please ignore this email.\n\n" +
-                        "Best regards,\n" +
-                        "Growth Tutoring Team"
-        );
+        // Print to console (for debugging)
+        System.out.println("\n═══════════════════════════════════════════════════");
+        System.out.println("📧 Email Verification Code");
+        System.out.println("Email: " + toEmail);
+        System.out.println("Code: " + code);
+        System.out.println("Expires: " + verification.getExpiresAt());
+        System.out.println("═══════════════════════════════════════════════════\n");
 
-        mailSender.send(message);
+        // Send actual email
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("Growth Tutoring - Email Verification");
+            message.setText(
+                    "Welcome to Growth Tutoring!\n\n" +
+                            "Your verification code is: " + code + "\n\n" +
+                            "This code will expire in 3 minutes.\n\n" +  // ← CHANGED
+                            "If you didn't request this code, please ignore this email.\n\n" +
+                            "Best regards,\n" +
+                            "Growth Tutoring Team"
+            );
+
+            mailSender.send(message);
+            System.out.println("✅ Email sent successfully to: " + toEmail);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send email: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public boolean verifyCode(String email, String code) {
