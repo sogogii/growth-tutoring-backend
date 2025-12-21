@@ -20,11 +20,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = {
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "https://dev.growthtutoringhq.com"
-})
 public class StudentTutorLinkController {
 
     @Autowired

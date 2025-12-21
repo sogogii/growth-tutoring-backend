@@ -14,10 +14,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tutors")
-@CrossOrigin(origins = {
-        "http://localhost:5173",
-        "https://dev.growthtutoringhq.com"
-})
 public class TutorReviewController {
 
     private final TutorRepository tutorRepository;

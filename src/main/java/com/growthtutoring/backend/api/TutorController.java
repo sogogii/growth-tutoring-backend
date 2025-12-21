@@ -17,12 +17,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * REST Controller for Tutor endpoints
+ * Handles both public tutor listing and private profile management
+ */
 @RestController
 @RequestMapping("/api/tutors")
-@CrossOrigin(origins = {
-        "http://localhost:5173",
-        "https://dev.growthtutoringhq.com"
-})
 public class TutorController {
 
     private final TutorRepository tutorRepository;
@@ -36,7 +36,10 @@ public class TutorController {
 
     // ================= PUBLIC ENDPOINTS (USED BY TUTORS PAGE) =================
 
-    // GET /api/tutors  -> list all ACTIVE tutors as DTOs
+    /**
+     * GET /api/tutors
+     * Returns list of all ACTIVE tutors for the public tutors listing page
+     */
     @GetMapping
     public List<TutorDto> getAllTutors() {
         List<Tutor> tutors = tutorRepository.findAll();
@@ -53,8 +56,10 @@ public class TutorController {
                 .collect(Collectors.toList());
     }
 
-
-    // GET /api/tutors/{userId} -> single ACTIVE tutor by user_id, as DTO
+    /**
+     * GET /api/tutors/{userId}
+     * Returns single ACTIVE tutor by user_id for public tutor profile page
+     */
     @GetMapping("/{userId}")
     public ResponseEntity<TutorDto> getTutorByUserId(@PathVariable Long userId) {
         Optional<Tutor> optTutor = tutorRepository.findByUserId(userId);
@@ -75,9 +80,13 @@ public class TutorController {
     }
 
     // ================= PROFILE ENDPOINTS FOR "MY PROFILE" =================
-    // These are used by the logged-in tutor themself, so we DO NOT filter by ACTIVE here.
+    // These are used by the logged-in tutor themself, so we DO NOT filter by ACTIVE status
 
-    // GET /api/tutors/user/{userId} -> detailed tutor profile for My Profile
+    /**
+     * GET /api/tutors/user/{userId}
+     * Returns detailed tutor profile for the My Profile page
+     * Used by tutors to view their own profile data
+     */
     @GetMapping("/user/{userId}")
     public ResponseEntity<TutorProfileDto> getTutorProfileByUserId(@PathVariable Long userId) {
         return tutorRepository.findByUserId(userId)
@@ -86,7 +95,11 @@ public class TutorController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // PUT /api/tutors/user/{userId} -> update subjects, hourly rate, teaching method
+    /**
+     * PUT /api/tutors/user/{userId}
+     * Updates tutor profile including subjects, hourly rate, teaching method, headline, and bio
+     * Used by tutors to edit their own profile
+     */
     @PutMapping("/user/{userId}")
     public ResponseEntity<?> updateTutorProfileByUserId(
             @PathVariable Long userId,
@@ -94,22 +107,31 @@ public class TutorController {
     ) {
         return tutorRepository.findByUserId(userId)
                 .map(tutor -> {
+                    // Update subject label
                     if (req.getSubjectLabel() != null) {
                         tutor.setSubjectLabel(req.getSubjectLabel());
                     }
 
+                    // Update hourly rate
                     if (req.getHourlyRate() != null) {
                         tutor.setHourlyRate(req.getHourlyRate());
                     } else if (tutor.getHourlyRate() == null) {
                         tutor.setHourlyRate(BigDecimal.ZERO);
                     }
 
+                    // Update teaching method
                     if (req.getTeachingMethod() != null) {
                         tutor.setTeachingMethod(
                                 TeachingMethod.valueOf(req.getTeachingMethod())
                         );
                     }
 
+                    // Update headline (brief summary for tutors listing)
+                    if (req.getHeadline() != null) {
+                        tutor.setHeadline(req.getHeadline());
+                    }
+
+                    // Update bio (detailed content for profile page)
                     if (req.getBio() != null) {
                         tutor.setBio(req.getBio());
                     }
@@ -122,7 +144,10 @@ public class TutorController {
 
     // ================= HELPER MAPPERS =================
 
-    // Existing DTO used for tutor list / cards
+    /**
+     * Maps Tutor entity to TutorDto for public listing
+     * Includes user information (name, email) and tutor details
+     */
     private TutorDto toDto(Tutor tutor) {
         User user = userRepository.findById(tutor.getUserId())
                 .orElse(null);
@@ -152,7 +177,10 @@ public class TutorController {
         );
     }
 
-    // Profile DTO used for My Profile
+    /**
+     * Maps Tutor entity to TutorProfileDto for My Profile page
+     * Simplified DTO with only tutor-specific fields (no user info)
+     */
     private TutorProfileDto toProfileDto(Tutor tutor) {
         return new TutorProfileDto(
                 tutor.getId(),

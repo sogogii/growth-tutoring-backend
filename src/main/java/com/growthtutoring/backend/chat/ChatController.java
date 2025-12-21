@@ -18,11 +18,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = {
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "https://dev.growthtutoringhq.com"
-})
 public class ChatController {
 
     private final ConversationRepository conversationRepo;
