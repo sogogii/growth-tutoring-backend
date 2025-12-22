@@ -130,7 +130,8 @@ public class AuthController {
                 savedUser.getEmail(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
-                savedUser.getRole().name()
+                savedUser.getRole().name(),
+                savedUser.getProfileImageUrl()
         );
 
         return ResponseEntity.ok(response);
@@ -162,7 +163,8 @@ public class AuthController {
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getProfileImageUrl()
         );
 
         return ResponseEntity.ok(response);

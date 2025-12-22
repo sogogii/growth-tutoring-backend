@@ -8,6 +8,7 @@ public record TutorDto(
         String firstName,
         String lastName,
         String email,
+        String profileImageUrl,
         BigDecimal ratingAvg,
         Integer ratingCount,
         LocalDate joinedAt,

@@ -155,12 +155,14 @@ public class TutorController {
         String firstName = user != null ? user.getFirstName() : null;
         String lastName  = user != null ? user.getLastName()  : null;
         String email     = user != null ? user.getEmail()     : null;
+        String profileImageUrl = user != null ? user.getProfileImageUrl() : null;
 
         return new TutorDto(
                 tutor.getUserId(),
                 firstName,
                 lastName,
                 email,
+                profileImageUrl,
                 tutor.getRatingAvg(),
                 tutor.getRatingCount(),
                 tutor.getJoinedAt(),
