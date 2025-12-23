@@ -10,14 +10,18 @@ public class FeedbackController {
 
     private final EmailService emailService;
     private final RecaptchaService recaptchaService;
+    private final FeedbackRepository feedbackRepository;
 
     // File size limits
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final long MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
 
-    public FeedbackController(EmailService emailService, RecaptchaService recaptchaService) {
+    public FeedbackController(EmailService emailService,
+                              RecaptchaService recaptchaService,
+                              FeedbackRepository feedbackRepository) {
         this.emailService = emailService;
         this.recaptchaService = recaptchaService;
+        this.feedbackRepository = feedbackRepository;
     }
 
     @PostMapping
@@ -58,6 +62,30 @@ public class FeedbackController {
         }
 
         try {
+            // Create feedback entity
+            Feedback feedback = new Feedback(
+                    request.getName(),
+                    request.getEmail(),
+                    request.getComment()
+            );
+
+            // Add attachments if present
+            if (request.getAttachments() != null) {
+                for (FileAttachment attachment : request.getAttachments()) {
+                    FeedbackAttachmentEntity attachmentEntity = new FeedbackAttachmentEntity(
+                            attachment.getName(),
+                            attachment.getType(),
+                            attachment.getSize()
+                    );
+                    feedback.addAttachment(attachmentEntity);
+                }
+            }
+
+            // Save to database
+            feedback = feedbackRepository.save(feedback);
+
+            System.out.println("✅ Feedback saved to database with ID: " + feedback.getId());
+
             // Send feedback email to info@growthtutoringhq.com
             emailService.sendFeedbackEmail(
                     request.getName(),
