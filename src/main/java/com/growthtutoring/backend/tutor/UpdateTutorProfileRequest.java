@@ -3,19 +3,32 @@ package com.growthtutoring.backend.tutor;
 import java.math.BigDecimal;
 
 /**
- * Request DTO for updating tutor profile information
- * Used when tutors edit their profile in the My Profile page
+ * Request DTO for updating tutor profile
+ * Used in PUT /api/tutors/user/{userId}
  */
 public class UpdateTutorProfileRequest {
-
-    private String subjectLabel;   // e.g., "K-12 Math, Physics, Chemistry"
+    private String subjectLabel;
     private BigDecimal hourlyRate;
-    private String teachingMethod; // "ONLINE", "IN_PERSON", or "HYBRID"
-    private String headline;       // Brief summary (max 255 chars) for tutors listing page
-    private String bio;            // Detailed bio for tutor profile page
+    private String teachingMethod;
+    private String headline;
+    private String bio;
+    private WeeklySchedule weeklySchedule;  // ADDED
+
+    // Constructors
+    public UpdateTutorProfileRequest() {}
+
+    public UpdateTutorProfileRequest(String subjectLabel, BigDecimal hourlyRate,
+                                     String teachingMethod, String headline,
+                                     String bio, WeeklySchedule weeklySchedule) {
+        this.subjectLabel = subjectLabel;
+        this.hourlyRate = hourlyRate;
+        this.teachingMethod = teachingMethod;
+        this.headline = headline;
+        this.bio = bio;
+        this.weeklySchedule = weeklySchedule;
+    }
 
     // Getters and Setters
-
     public String getSubjectLabel() {
         return subjectLabel;
     }
@@ -54,5 +67,13 @@ public class UpdateTutorProfileRequest {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public WeeklySchedule getWeeklySchedule() {
+        return weeklySchedule;
+    }
+
+    public void setWeeklySchedule(WeeklySchedule weeklySchedule) {
+        this.weeklySchedule = weeklySchedule;
     }
 }

@@ -3,6 +3,11 @@ package com.growthtutoring.backend.tutor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * DTO for Tutor public listing
+ * Includes user information (name, email) and tutor details
+ * Updated to include weeklySchedule
+ */
 public record TutorDto(
         Long userId,
         String firstName,
@@ -19,5 +24,6 @@ public record TutorDto(
         String headline,
         String bio,
         BigDecimal hourlyRate,
-        String verificationTier
+        String verificationTier,
+        WeeklySchedule weeklySchedule  // ADDED
 ) {}

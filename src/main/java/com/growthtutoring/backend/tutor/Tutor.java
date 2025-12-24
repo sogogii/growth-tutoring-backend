@@ -1,5 +1,7 @@
 package com.growthtutoring.backend.tutor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,10 +12,10 @@ public class Tutor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;   // id BIGINT AUTO_INCREMENT
+    private Long id;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;   // FK → users.id
+    private Long userId;
 
     @Column(name = "rating_avg", precision = 3, scale = 2)
     private BigDecimal ratingAvg;
@@ -50,7 +52,49 @@ public class Tutor {
     @Column(name = "verification_tier", length = 20)
     private VerificationTier verificationTier;
 
-    // getters & setters
+    // NEW: Weekly schedule stored as JSON
+    @Column(name = "weekly_schedule", columnDefinition = "JSON")
+    private String weeklyScheduleJson;
+
+    // Transient field for easy access (not stored in DB)
+    @Transient
+    private WeeklySchedule weeklySchedule;
+
+    // Helper for JSON conversion
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    @PostLoad
+    public void loadSchedule() {
+        if (weeklyScheduleJson != null && !weeklyScheduleJson.isEmpty() && !weeklyScheduleJson.equals("null")) {
+            try {
+                this.weeklySchedule = objectMapper.readValue(weeklyScheduleJson, WeeklySchedule.class);
+            } catch (JsonProcessingException e) {
+                System.err.println("Error deserializing schedule: " + e.getMessage());
+                this.weeklySchedule = null;
+            }
+        } else {
+            this.weeklySchedule = null;
+        }
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void saveSchedule() {
+        try {
+            if (weeklySchedule != null) {
+                this.weeklyScheduleJson = objectMapper.writeValueAsString(weeklySchedule);
+                System.out.println("Serialized schedule to JSON: " + this.weeklyScheduleJson);
+            } else {
+                this.weeklyScheduleJson = null;
+                System.out.println("Schedule is null, setting JSON to null");
+            }
+        } catch (JsonProcessingException e) {
+            System.err.println("Error serializing schedule: " + e.getMessage());
+            this.weeklyScheduleJson = null;
+        }
+    }
+
+    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -144,7 +188,29 @@ public class Tutor {
         this.hourlyRate = hourlyRate;
     }
 
-    public VerificationTier getVerificationTier() { return verificationTier; }
+    public VerificationTier getVerificationTier() {
+        return verificationTier;
+    }
 
-    public void setVerificationTier(VerificationTier verificationTier) { this.verificationTier = verificationTier; }
+    public void setVerificationTier(VerificationTier verificationTier) {
+        this.verificationTier = verificationTier;
+    }
+
+    public WeeklySchedule getWeeklySchedule() {
+        return weeklySchedule;
+    }
+
+    public void setWeeklySchedule(WeeklySchedule weeklySchedule) {
+        this.weeklySchedule = weeklySchedule;
+        // IMPORTANT: Manually trigger serialization
+        saveSchedule();
+    }
+
+    public String getWeeklyScheduleJson() {
+        return weeklyScheduleJson;
+    }
+
+    public void setWeeklyScheduleJson(String weeklyScheduleJson) {
+        this.weeklyScheduleJson = weeklyScheduleJson;
+    }
 }

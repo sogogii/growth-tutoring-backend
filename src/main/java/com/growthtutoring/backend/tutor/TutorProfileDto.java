@@ -2,6 +2,11 @@ package com.growthtutoring.backend.tutor;
 
 import java.math.BigDecimal;
 
+/**
+ * DTO for Tutor profile view (My Profile page)
+ * Simplified DTO with only tutor-specific fields (no user info)
+ * Updated to include weeklySchedule
+ */
 public record TutorProfileDto(
         Long id,
         Long userId,
@@ -11,5 +16,6 @@ public record TutorProfileDto(
         String headline,
         String bio,
         BigDecimal hourlyRate,
-        String verificationTier
+        String verificationTier,
+        WeeklySchedule weeklySchedule  // ADDED
 ) {}

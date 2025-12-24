@@ -1,4 +1,4 @@
-package com.growthtutoring.backend.api;
+package com.growthtutoring.backend.tutor;
 
 import com.growthtutoring.backend.tutor.Tutor;
 import com.growthtutoring.backend.tutor.TutorDto;
@@ -136,12 +136,73 @@ public class TutorController {
                         tutor.setBio(req.getBio());
                     }
 
+                    // Update weekly schedule - NEW
+                    if (req.getWeeklySchedule() != null) {
+                        tutor.setWeeklySchedule(req.getWeeklySchedule());
+                    }
+
                     Tutor saved = tutorRepository.save(tutor);
                     return ResponseEntity.ok(toProfileDto(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // ================= SCHEDULE ENDPOINTS - NEW =================
+
+    /**
+     * GET /api/tutors/user/{userId}/schedule
+     * Returns tutor's weekly schedule
+     */
+    @GetMapping("/user/{userId}/schedule")
+    public ResponseEntity<WeeklySchedule> getTutorSchedule(@PathVariable Long userId) {
+        return tutorRepository.findByUserId(userId)
+                .map(tutor -> {
+                    WeeklySchedule schedule = tutor.getWeeklySchedule();
+
+                    // Log what we're returning
+                    System.out.println("Loading schedule for user: " + userId);
+                    System.out.println("Schedule JSON from DB: " + tutor.getWeeklyScheduleJson());
+                    System.out.println("Deserialized schedule: " + (schedule != null ? "present" : "null"));
+
+                    if (schedule == null) {
+                        schedule = new WeeklySchedule();
+                    }
+                    return ResponseEntity.ok(schedule);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * PUT /api/tutors/user/{userId}/schedule
+     * Updates tutor's weekly schedule
+     */
+    @PutMapping("/user/{userId}/schedule")
+    public ResponseEntity<?> updateTutorSchedule(
+            @PathVariable Long userId,
+            @RequestBody WeeklySchedule scheduleRequest
+    ) {
+        return tutorRepository.findByUserId(userId)
+                .map(tutor -> {
+                    // Set the schedule
+                    tutor.setWeeklySchedule(scheduleRequest);
+
+                    // Force the schedule to be serialized
+                    if (scheduleRequest != null) {
+                        System.out.println("Saving schedule for user: " + userId);
+                    } else {
+                        System.out.println("Clearing schedule for user: " + userId);
+                    }
+
+                    // Save the entity
+                    Tutor saved = tutorRepository.save(tutor);
+
+                    // Log what was saved
+                    System.out.println("Saved schedule JSON: " + saved.getWeeklyScheduleJson());
+
+                    return ResponseEntity.ok(toProfileDto(saved));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
     // ================= HELPER MAPPERS =================
 
     /**
@@ -175,7 +236,8 @@ public class TutorController {
                 tutor.getHourlyRate(),
                 tutor.getVerificationTier() != null
                         ? tutor.getVerificationTier().name()
-                        : "TIER_1"
+                        : "TIER_1",
+                tutor.getWeeklySchedule()  // ADDED
         );
     }
 
@@ -197,7 +259,8 @@ public class TutorController {
                 tutor.getHourlyRate(),
                 tutor.getVerificationTier() != null
                         ? tutor.getVerificationTier().name()
-                        : "TIER_1"
+                        : "TIER_1",
+                tutor.getWeeklySchedule()  // ADDED
         );
     }
 }
