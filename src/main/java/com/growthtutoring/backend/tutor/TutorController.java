@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * REST Controller for Tutor endpoints
@@ -78,6 +79,52 @@ public class TutorController {
 
         return ResponseEntity.ok(toDto(tutor));
     }
+
+    /**
+     * PUT /api/tutors/{userId}
+     * Updates tutor information including schedule
+     * Used by both the schedule editor and booking system
+     */
+    @PutMapping("/{userId}")
+    public ResponseEntity<?> updateTutor(
+            @PathVariable Long userId,
+            @RequestBody java.util.Map<String, Object> updates) {
+
+        return tutorRepository.findByUserId(userId)
+                .map(tutor -> {
+                    // Update weeklySchedule if provided
+                    if (updates.containsKey("weeklySchedule")) {
+                        Object scheduleData = updates.get("weeklySchedule");
+
+                        try {
+                            // Convert the Map to WeeklySchedule object
+                            com.fasterxml.jackson.databind.ObjectMapper mapper =
+                                    new com.fasterxml.jackson.databind.ObjectMapper();
+                            WeeklySchedule schedule = mapper.convertValue(
+                                    scheduleData,
+                                    WeeklySchedule.class
+                            );
+                            tutor.setWeeklySchedule(schedule);
+
+                            System.out.println("✓ Schedule updated for user: " + userId);
+
+                        } catch (Exception e) {
+                            System.err.println("✗ Error converting schedule: " + e.getMessage());
+                            e.printStackTrace();
+                            return ResponseEntity.badRequest()
+                                    .body(java.util.Map.of("error", "Invalid schedule format: " + e.getMessage()));
+                        }
+                    }
+
+                    // Save to database
+                    tutorRepository.save(tutor);
+
+                    // Return updated tutor
+                    return ResponseEntity.ok(toDto(tutor));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 
     // ================= PROFILE ENDPOINTS FOR "MY PROFILE" =================
     // These are used by the logged-in tutor themself, so we DO NOT filter by ACTIVE status

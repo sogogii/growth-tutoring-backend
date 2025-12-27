@@ -5,12 +5,14 @@ import com.growthtutoring.backend.user.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/session-requests")
@@ -276,6 +278,68 @@ public class SessionRequestController {
                     return ResponseEntity.ok().build();
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Accept a session request
+     * POST /api/session-requests/{requestId}/accept
+     */
+    @PostMapping("/{requestId}/accept")
+    public ResponseEntity<?> acceptRequest(@PathVariable Long requestId) {
+        try {
+            SessionRequest request = sessionRequestRepository.findById(requestId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Session request not found"));
+
+            // Validate current status
+            if (request.getStatus() != SessionRequestStatus.PENDING) {
+                return ResponseEntity.badRequest()
+                        .body("Can only accept pending requests");
+            }
+
+            // Update status
+            request.setStatus(SessionRequestStatus.ACCEPTED);
+            request.setRespondedAt(Instant.now());
+            sessionRequestRepository.save(request);
+
+            return ResponseEntity.ok("Session request accepted");
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to accept request: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Decline a session request
+     * POST /api/session-requests/{requestId}/decline
+     */
+    @PostMapping("/{requestId}/decline")
+    public ResponseEntity<?> declineRequest(@PathVariable Long requestId) {
+        try {
+            SessionRequest request = sessionRequestRepository.findById(requestId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Session request not found"));
+
+            // Validate current status
+            if (request.getStatus() != SessionRequestStatus.PENDING) {
+                return ResponseEntity.badRequest()
+                        .body("Can only decline pending requests");
+            }
+
+            // Update status
+            request.setStatus(SessionRequestStatus.DECLINED);
+            request.setRespondedAt(Instant.now());
+            sessionRequestRepository.save(request);
+
+            return ResponseEntity.ok("Session request declined");
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to decline request: " + e.getMessage());
+        }
     }
 
     // Helper method to convert entity to DTO

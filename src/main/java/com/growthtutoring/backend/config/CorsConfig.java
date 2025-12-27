@@ -1,44 +1,52 @@
 package com.growthtutoring.backend.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
-/**
- * CORS Configuration for Growth Tutoring Backend
- *
- * This allows the frontend (running on port 5173) to make requests to the backend API.
- *
- * IMPORTANT: Replace your existing CorsConfig.java with this version if the @Bean approach isn't working.
- */
+import java.util.Arrays;
+
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    public CorsConfig() {
-        // This will print when Spring loads the configuration
-        System.out.println("========================================");
-        System.out.println("✓ CORS Configuration Loaded!");
-        System.out.println("========================================");
-    }
+    @Bean
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
+        // Allow credentials
+        config.setAllowCredentials(true);
+
+        // Allow origins
+        config.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:5173",
+                "http://localhost:8080",
+                "http://localhost:8000",
+                "http://localhost:3000"
+        ));
+
+        // Allow headers
+        config.setAllowedHeaders(Arrays.asList("*"));
+
+        // Allow methods
+        config.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        // Max age
+        config.setMaxAge(3600L);
+
+        source.registerCorsConfiguration("/api/**", config);
+
         System.out.println("========================================");
-        System.out.println("✓ Adding CORS Mappings:");
-        System.out.println("  - Allowed Origins: 5173, 8080, 8000");
-        System.out.println("  - Allowed Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS");
+        System.out.println("✓ CORS Filter Configured");
+        System.out.println("  Allowed Origins: localhost:5173, 8080, 8000, 3000");
+        System.out.println("  Allowed Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
         System.out.println("========================================");
 
-        registry.addMapping("/api/**")
-                .allowedOrigins(
-                        "http://localhost:5173",
-                        "http://localhost:8080",
-                        "http://localhost:8000",
-                        "https://dev.growthtutoringhq.com"
-                )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
+        return new CorsFilter(source);
     }
 }
